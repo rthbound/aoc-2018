@@ -2,7 +2,7 @@ module Day
   module Solutions
     class Day1 < PayDirt::Base
       def initialize(options = {})
-        load_options(:input_file, :day, options) do
+        load_options(:input_file, options) do
           @input   = File.read(@input_file).scan(/[+-]?\d+/).map(&:to_i)
         end
       end
