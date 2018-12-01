@@ -1,0 +1,3 @@
+#!/bin/bash
+#
+bundle exec ruby -e "require 'aoc'; AOC::Runner.new.call"
