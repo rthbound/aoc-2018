@@ -3,16 +3,29 @@
 DAY=$1
 SOLUTION_FILE="lib/day/solutions/day$DAY.rb"
 INPUT_FILE="lib/day/inputs/$DAY.txt"
+TEST_FILE="test/unit/day/solutions/day${DAY}_test.rb"
+
+function esc_forward_slash_in_var {
+    local mid_q=\\\/ # an escaped forward slash
+    printf '%s' "'${1//\//$mid_q}'"
+}
+escaped_test_file="$(esc_forward_slash_in_var "$INPUT_FILE")"
+
+touch $INPUT_FILE
+
 thor pay_dirt:service_object:new \
   day/solutions/day$DAY          \
-  -d day                         \
-  -V                             \
-  -D file_class:File input_file:\"$INPUT_FILE\"
-
-sed -i.bak '14a\
+  -d input_file                  \
+  -D file_class:File             \
+  -V
+  #--test-framework=minitest      \
+sed -i.bak "s/MiniTest::Mock.new/${escaped_test_file}/" $TEST_FILE
+sed -i.bak '11a\
 \ \ \ \ \ \ \ \ \ \ @input = @file_class.read(@input_file)
 ' $SOLUTION_FILE
 
+#rm $TEST_FILE.bak
 rm $SOLUTION_FILE.bak
-touch $INPUT_FILE
-vim -p $SOLUTION_FILE $INPUT_FILE
+
+# Edit away
+vim -p $SOLUTION_FILE $TEST_FILE $INPUT_FILE

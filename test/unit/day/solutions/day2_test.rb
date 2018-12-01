@@ -4,7 +4,7 @@ describe Day::Solutions::Day2 do
   before do
     @subject = Day::Solutions::Day2
     @params = {
-      day: MiniTest::Mock.new,
+      input_file: 'lib/day/inputs/2.txt',
     }
   end
 
@@ -14,7 +14,7 @@ describe Day::Solutions::Day2 do
     end
 
     it "errors when initialized without required dependencies" do
-      -> { @subject.new(@params.reject { |k| k.to_s == 'day' }) }.must_raise RuntimeError
+      -> { @subject.new(@params.reject { |k| k.to_s == 'input_file' }) }.must_raise RuntimeError
     end
   end
 

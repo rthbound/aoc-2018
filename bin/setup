@@ -1,8 +1,18 @@
 #!/usr/bin/env bash
+source ~/.rvm/scripts/rvm
+
 set -euo pipefail
 IFS=$'\n\t'
-set -vx
+#set -vx
+
+rubies=ruby-2.6.0-preview2
+echo $rubies > .ruby-version
+
+if [ "$rubies" != "$(rvm current)" ]
+then
+  rvm install $rubies
+  rvm use $rubies
+fi
 
 bundle install
-
-# Do any other automated setup that you need to do here
+bundle exec rake test
