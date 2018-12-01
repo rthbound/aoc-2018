@@ -1,0 +1,4 @@
+#!/bin/bash
+#
+DAY=$1
+bundle exec ruby -e "require 'day'; Day::Runner.new(day: $DAY).call"
