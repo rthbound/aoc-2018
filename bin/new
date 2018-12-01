@@ -1,0 +1,18 @@
+#!/bin/bash
+#
+DAY=$1
+SOLUTION_FILE="lib/day/solutions/day$DAY.rb"
+INPUT_FILE="lib/day/inputs/$DAY.txt"
+thor pay_dirt:service_object:new \
+  day/solutions/day$DAY          \
+  -d day                         \
+  -V                             \
+  -D file_class:File input_file:\"$INPUT_FILE\"
+
+sed -i.bak '14a\
+\ \ \ \ \ \ \ \ \ \ @input = @file_class.read(@input_file)
+' $SOLUTION_FILE
+
+rm $SOLUTION_FILE.bak
+touch $INPUT_FILE
+vim -p $SOLUTION_FILE $INPUT_FILE
