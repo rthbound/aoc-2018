@@ -17,17 +17,11 @@ module Day
       private
 
       def find_first_frequency_visited_twice
-        frequency = 0
-        visited   = Set.new [frequency]
+        frequency = 0 and visited = Set[frequency]
 
-        @input.cycle do |i|
-          frequency += i
-          if visited.include?(frequency)
-            result = frequency
-            break(result)
-          else
-            visited << frequency
-          end
+        @input.cycle do |δf|
+          break frequency if visited.include? frequency += δf
+          visited << frequency
         end
       end
     end
