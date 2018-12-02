@@ -1,4 +1,5 @@
 require 'benchmark'
+require 'pry'
 require 'pay_dirt'
 require_relative 'day/runner'
 require_relative 'day/solutions'
