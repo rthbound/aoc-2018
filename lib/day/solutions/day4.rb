@@ -11,98 +11,89 @@ module Day
         load_options(:input_file, options) do
           @input = @file_class.read(@input_file)
           @input = @file_class.read(@input_file)
-#         [1518-06-22 00:46] falls asleep
-#         [1518-08-15 00:39] wakes up
-#         [1518-06-26 23:50] Guard #2377 begins shift
-          @input = @input.scan(/\[(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})\] (Guard #\d+)? ?(falls asleep|wakes up|begins shift)/)
-          @guard_on_duty = OpenStruct.new(guard: nil, awake: true)
+          @input = @input.scan(
+            /\[(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})\] (Guard #\d+)? ?(falls asleep|wakes up|begins shift)/
+          ).map {|year, month, day, hour, minute, guard_id, event|
+            [
+              Time.new(year, month, day, hour, minute),
+              guard_id,
+              event
+            ]
+          }.sort_by(&:first)
+          @current_guard = nil
+
           @history = {}
         end
       end
 
-      # Strategy 1: Find the guard that has the most minutes asleep. What minute does that guard spend asleep the most?
-      # What is the ID of the guard you chose multiplied by the minute you chose?
       def call
-        @input.each_cons(2) do |current_event, next_event|
-          changing_of_the_guard(current_event)
+        return result(true, whatever)
+      end
 
-          current_event = parse_event(current_event)
-          next_event    = parse_event(next_event)
+      private
+      def whatever
+        lol = @input.map { |log_entry| parse_log_entry(*log_entry) }
 
-          log_status(current_event) if current_event[:hour] == "00"
 
-          current_time  = Time.new *current_event.values_at(:year, :month, :day, :hour, :minute)
-          next_time     = Time.new *next_event.values_at(   :year, :month, :day, :hour, :minute)
+        lol_e = lol.map
 
-          while current_time < next_time do
-            current_time += 60
-            break unless current_time.strftime("%H") == "00"
-            current_event[:minute] = current_time.strftime("%M")
-            current_event[:day   ] = current_time.strftime("%d")
-            current_event[:month ] = current_time.strftime("%m")
-            current_event[:year  ] = current_time.strftime("%Y")
-            log_status(current_event)
+        extras = Array.new.tap { |accum|
+          loop do
+            accum.push lol_e.peek
+
+            current_event_time,
+            current_guard_id,
+            current_message,
+            current_status = lol_e.next
+
+            next_event_time,
+            next_guard_id,
+            next_message,
+            next_status = lol_e.peek
+
+            loop do
+              if next_event_time - current_event_time == 60
+                break
+              else
+                case (current_event_time + 60).hour
+                when 23,0
+                  current_event_time += 60
+                  accum.push([current_event_time, current_guard_id, current_message, current_status])
+                else
+                  break
+                end
+              end
+            end
+          rescue StopIteration
+            break
           end
-        end
-
-        changing_of_the_guard(@input[-1])
-        current_event = parse_event(@input[-1])
-        current_time  = Time.new *current_event.values_at(:year, :month, :day, :hour, :minute)
-
-        log_status(current_event) if current_event[:hour] == "00"
-
-        while current_time.strftime("%H") == "00" do
-          current_time += 60
-          break unless current_time.strftime("%H") == "00"
-          current_event[:minute] = current_time.strftime("%M")
-          current_event[:day   ] = current_time.strftime("%d")
-          current_event[:month ] = current_time.strftime("%m")
-          current_event[:year  ] = current_time.strftime("%Y")
-          log_status(current_event)
-        end
-        guard = @history.map {|guard, days| [guard, days.map {|date, hours| hours.values.flatten.count {|awake| awake == false } }.sum ] }.max_by(&:last).first
-        result(true, {
-          part_one: @history[guard][:minute_tally].to_a.max_by(&:last).first.to_i * guard[/\d+/].to_i
-        })
-      end
-
-      def log_status(event)
-        @history[event.fetch(:guard)] ||= {}
-        @history[event.fetch(:guard)][event.values_at(:year, :month, :day).join] ||= Hash[
-          "00".upto("59").zip([])
-        ]
-        @history[event.fetch(:guard)][event.values_at(:year, :month, :day).join][event[:minute]] = @guard_on_duty.awake
-
-        log_sleepy_time(event) unless @guard_on_duty.awake
-      end
-
-      def log_sleepy_time(event)
-        @history[@guard_on_duty.guard][:minute_tally] ||= {}
-        @history[@guard_on_duty.guard][:minute_tally][event[:minute]] ||= 0
-        @history[@guard_on_duty.guard][:minute_tally][event[:minute]] += 1
-      end
-
-      def changing_of_the_guard(event)
-        event = parse_event(event)
-
-        @guard_on_duty.guard = event[:guard]
-        @guard_on_duty.awake = event[:event].match? /(wakes up|begins shift)/
-      end
-
-      def guard_index
-        5
-      end
-
-      def parse_event(event)
-        event = {
-          year:   event[0],
-          month:  event[1],
-          day:    event[2],
-          hour:   event[3],
-          minute: event[4],
-          guard:  event[guard_index] || @guard_on_duty.guard,
-          event:  event[-1]
+        }.
+          reject {|time, *| time.hour == 23 }.
+          group_by {|_,g,_| g }.
+          map {|key,records| [key, records.group_by {|t,*|  t.strftime("%Y-%m-%d")}] }.to_h
+        sucker = extras.map {|guard,entries| [guard, entries.values.flatten(1).count {|x| x.last == "#" }] }.to_h.max_by {|k,v| v }.first
+        weak_spot = extras[sucker].values.flatten(1).select {|entry| entry.last == "#" }.map(&:first).map(&:min).group_by(&:inspect).max_by {|k,v| v.size }[-1][-1]
+        sucker2, times = extras.map {|guard, entries| [guard, entries.values.flatten(1).select {|e| e.last == "#"}.group_by{|t, *| t.min }.map {|k,v| [k,v.size] }.to_h]}.to_h.map {|guard, tally| [ guard, tally.max_by {|k,v| v } ] }.to_h.max_by {|k,v| v&.last || 0 }
+        {
+          part_one: { sucker: sucker, weak_spot: weak_spot, solution: weak_spot * sucker[/\d+/].to_i },
+          part_two: { sucker: sucker2, weak_spot: times[0], solution: sucker2[/\d+/].to_i * times[0] }
         }
+      end
+      def parse_log_entry(time, guard_id, event)
+        guard = guard_id.nil? ? @current_guard : guard_id
+        [
+          time,
+          @current_guard = guard,
+          event,
+          case event
+          when /begins shift/
+            "."
+          when /falls asleep/
+            "#"
+          when /wakes up/
+            "."
+          end
+        ]
       end
     end
   end
