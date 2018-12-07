@@ -3,3 +3,4 @@ require "day"
 
 require "minitest/autorun"
 require "day/solutions/day2"
+require "day/solutions/day3"
